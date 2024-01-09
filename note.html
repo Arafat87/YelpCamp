@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!--If you would like to automatically get the real coordinates for the randomly 
+        generated location of your seeded camp, instead of just hard coding 
+        fake coordinates, you can do it either by using geocoding or you can just use 
+        the coordinates providing by the cities.js.
+
+With Geocoding
+
+1) Be sure to add the following code at the top so the Seeds 
+index can read the ENV file
+
+if (process.env.NODE_ENV !== "production") {
+    require('dotenv').config();
+}
+
+
+2) Import the mapbox
+
+const mbxGeocoding = require("@mapbox/mapbox-sdk/services/geocoding");
+const mapBoxToken = process.env.MAPBOX_TOKEN;
+const geocoder = mbxGeocoding({accessToken: mapBoxToken});
+
+
+3) Follow the same method we used when creating a new Campground... 
+In each loop, I created a new Location variable to store the location 
+(instead of creating it at the same time that we create the new Campground) 
+so that I can use it for geoData's query. 
+Then it is as simple as setting Campground's geometry as the geoData's geometry.
+
+const seedDB = async() => {
+    await Campground.deleteMany({}); // delete everything
+
+    // Seed 50 new camps
+    for(let i = 0; i < 50; i++){
+        const random1000 = Math.floor(Math.random() * 1000);
+        const name = `${sample(descriptors)} ${sample(places)}`;
+        const price = Math.floor(Math.random() * 20) + 10;
+        const location = `${cities[random1000].city}, ${cities[random1000].state}`
+        const geoData = await geocoder.forwardGeocode({
+            query: location,
+            limit: 1
+        }).send()
+        
+        const camp = new Campground({
+            // YOUR USER ID
+            author: '608d77411ed4d37acc24bcca',
+            title: name,
+            location: location,
+            description: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Molestias magni distinctio porro, cum dicta perspiciatis nam? Ad maiores, nisi voluptatum obcaecati magni neque omnis ab et nobis amet molestias exercitationem.",
+            price,
+            geometry: geoData.body.features[0].geometry,
+            images: [
+                {
+                    url: 'https://res.cloudinary.com/droisu2zo/image/upload/v1621642150/YelpCamp/horsie_nf69ca.jpg',
+                    filename: 'YelpCamp/hills_dflhtz'
+                },
+                {
+                    url: 'https://res.cloudinary.com/droisu2zo/image/upload/v1621642150/YelpCamp/hills_dflhtz.jpg',
+                    filename: 'YelpCamp/hills_dflhtz'
+                }
+            ]
+        })
+        await camp.save();
+    }
+}
+
+
+With the Cities javascript
+
+No extra coding needing. Just replace the coordinates with the longitude and latitude of your cities[random1000]. Honestly not sure why Colt just didn't do this right away.
+
+geometry: {
+                type: "Point",
+                coordinates: [
+                    cities[random1000].longitude,
+                    cities[random1000].latitude,
+                ]
+            },
+
+
+            
+one more bug, about updating the location on the map
+Colt didn't add the logic to update the location in the PUT route for brevity, 
+but you can use the same logic already taught in the course, 
+found in the create controller to the update controller as well 
+so that the geometry property can be updated with the new value. Like this:
+
+module.exports.updateCampground = async (req, res) => {
+    const { id } = req.params;
+    const geoData = await geocoder
+    .forwardGeocode({
+    query: req.body.campground.location,
+    limit: 1,
+    })
+    .send();
+    const campground = await Campground.findByIdAndUpdate(id, {
+    ...req.body.campground,
+    });
+    const imgs = req.files.map((f) => ({ url: f.path, filename: f.filename }));
+    campground.images.push(...imgs);
+    campground.geometry = geoData.body.features[0].geometry;
+    await campground.save();
+    if (req.body.deleteImages) {
+    for (let filename of req.body.deleteImages) {
+    await cloudinary.uploader.destroy(filename);
+        }
+    await campground.updateOne({
+    $pull: { images: { filename: { $in: req.body.deleteImages } } },
+    });
+    }
+    console.log(campground);
+    req.flash("success", "Successfully update a campground");
+    res.redirect(`/campgrounds/${campground._id}`);
+};
+
+-->
+</body>
+</html>

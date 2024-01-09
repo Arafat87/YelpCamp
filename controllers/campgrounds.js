@@ -7,7 +7,7 @@ const geocoder = mbxGeocoding({ accessToken: mapBoxToken});
 const { cloudinary } = require('../cloudinary');
 
 module.exports.index = async (req, res) => {
-    const campgrounds = await Campground.find({});
+    const campgrounds = await Campground.find({})   //.populate('popupText');
     res.render('campgrounds/index', {
         campgrounds
     })
@@ -33,7 +33,6 @@ module.exports.createCampground = async (req, res, next) => {
     console.log(campground);
     req.flash('success', 'Successfully made a new campground!');
     res.redirect(`/campgrounds/${campground._id}`)
-
 }
 
 module.exports.showCampground = async (req, res) => {
@@ -71,6 +70,11 @@ module.exports.updateCampground = async (req, res) => {
         id
     } = req.params;
     console.log(req.body);
+    const geoData = await geocoder.forwardGeocode({
+    query: req.body.campground.location,
+    limit: 1,
+    })
+    .send();
     const campground = await Campground.findByIdAndUpdate(id, {
         ...req.body.campground
     });

@@ -1,6 +1,7 @@
 module.exports.isLoggedIn = ((req, res, next) => {//checks if a user is logged in
     if (!req.isAuthenticated()) {
-        req.flash('err', 'You must be logged in to perform that action!')
+        req.session.returnTo = req.originalUrl;
+        req.flash('error', 'You must be logged in to perform that action!')
         return res.redirect('/login')
     }
     next();
@@ -8,14 +9,14 @@ module.exports.isLoggedIn = ((req, res, next) => {//checks if a user is logged i
 
 module.exports.storeReturnTo = ((req, res, next) => {//stores the last visited URL to res.locals to return back to previous page before logging in
     if (req.session.returnTo) {
-        res.locals.returnTo = req.session.returnTo
+        res.locals.returnTo = req.session.returnTo;
     }
     next();
 })
 
 module.exports.notLoggedIn = ((req, res, next) => { //middleware to check if user is NOT logged in
     if (req.isAuthenticated()) {
-        req.flash('err', "You're already logged in. To switch account, logout first.")
+        req.flash('error', "You're already logged in. To switch account, logout first.")
         return res.redirect('/campgrounds')
     }
     next();
@@ -29,7 +30,7 @@ module.exports.isAuthor = (async (req, res, next) => {//middleware to check if t
     const { id } = req.params
     const campground = await Campground.findById(id)
     if (!campground.author.equals(req.user._id)) {
-        req.flash('err', "Sorry, you don't have permission to do that!")
+        req.flash('error', "Sorry, you don't have permission to do that!")
         return res.redirect(`/campgrounds/${id}`)
     }
     next();
@@ -41,7 +42,7 @@ module.exports.validateCampground = (req, res, next) => {//middleware to validat
     const { error } = campgroundSchema.validate(userInputs)
     if (error) {
         const msg = error.details.map(el => el.message).join(',')
-        req.flash('err', msg)
+        req.flash('error', msg)
         req.flash('formData', userInputs) //storing the userInputs in the current session so that we can pre-fill the form after displaying the flash message
         // throw new expressError(msg, 400) //can be used to throw an error and display msg on new page instead of flash message
         return res.redirect(req.originalUrl.split('?_method=')[0])//redirecting to the same page
@@ -59,7 +60,7 @@ module.exports.validateReview = (req, res, next) => {//middleware to validate re
     const { error } = reviewSchema.validate(userInputs)
     if (error) {
         const msg = error.details.map(el => el.message).join(',')
-        req.flash('err', msg)
+        req.flash('error', msg)
         req.flash('formData', userInputs)//storing the userInputs in the current session so that we can pre-fill the form after displaying the flash message
         res.redirect(req.originalUrl.split('/reviews')[0])
         //throw new expressError(msg, 400)//can be used to throw an error and display msg on new page instead of flash message
@@ -72,7 +73,7 @@ module.exports.isReviewAuthor = (async (req, res, next) => {//middleware to chec
     const { id, reviewId } = req.params;
     const review = await Review.findById(reviewId)
     if (!review.author.equals(req.user._id)) {
-        req.flash('err', "Sorry, you didn't write this review!")
+        req.flash('error', "Sorry, you didn't write this review!")
         return res.redirect(`/campgrounds/${id}`)
     }
     next();
@@ -84,7 +85,7 @@ module.exports.validateUser = (req, res, next) => {
     const { error } = userSchema.validate(userInputs)
     if (error) {
         const msg = error.details.map(el => el.message).join(',')
-        req.flash('err', msg)
+        req.flash('error', msg)
         res.redirect('/signup')
     } else {
         next();
